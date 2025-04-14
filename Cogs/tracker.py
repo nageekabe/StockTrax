@@ -9,61 +9,77 @@ import mplfinance as mpf
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
-from PIL import Image, ImageFilter  # Added Pillow imports
 
-class Tracker(commands.Cog):
+class StockTracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.update_announcement.start()
-        self.channel_id = None
-        self.tracker = {}
-        self.bot.loop.create_task(self.load_config())
+        self.server_configs = {}
+        self.bot.loop.create_task(self.load_configs())
         plt.switch_backend('Agg')
 
-    def cog_unload(self):
-        self.update_announcement.cancel()
+    async def load_configs(self):
+        """Load server-specific configurations"""
+        try:
+            if os.path.exists("server_configs.json"):
+                with open("server_configs.json", "r") as f:
+                    self.server_configs = json.load(f)
+        except Exception:
+            self.server_configs = {}
 
-    # ... (keep existing save_config, load_config, cleanup_messages methods unchanged) ...
+    async def save_configs(self):
+        """Save server configurations"""
+        with open("server_configs.json", "w") as f:
+            json.dump(self.server_configs, f)
 
-    async def update_or_create_message(self, symbol):
-        channel = self.bot.get_channel(self.channel_id)
+    async def update_or_create_message(self, guild_id, symbol):
+        """Handle message updates/creation"""
+        config = self.server_configs.get(str(guild_id), {})
+        if not config.get("channel_id"):
+            return
+
+        channel = self.bot.get_channel(config["channel_id"])
         if not channel:
-            return None
+            return
 
         try:
             message = None
-            if symbol in self.tracker and self.tracker[symbol]:
+            tracker = config["tracker"]
+            
+            # Fetch existing message
+            if symbol in tracker and tracker[symbol]:
                 try:
-                    message = await channel.fetch_message(self.tracker[symbol])
+                    message = await channel.fetch_message(tracker[symbol])
                 except discord.NotFound:
-                    self.tracker[symbol] = None
+                    tracker[symbol] = None
 
+            # Generate updated content
             stock = yf.Ticker(symbol)
             hist = stock.history(period="1d", interval="1m")
             
             if not hist.empty:
                 hist = hist[['Open', 'High', 'Low', 'Close', 'Volume']]
-                hist.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
                 hist = hist.dropna()
                 
                 latest = hist.iloc[-1]
                 change = ((latest["Close"] - hist.iloc[0]["Open"]) / hist.iloc[0]["Open"]) * 100
                 trend = "📈" if change >= 0 else "📉"
                 
-                # Generate dual-resolution images
+                # Generate dual-resolution charts
                 thumb_buf, full_buf = await asyncio.to_thread(
-                    self.generate_dual_resolution_charts, hist
+                    self._generate_charts, hist
                 )
-
-                # Create sharpened thumbnail
                 sharp_thumb = await asyncio.to_thread(
-                    self.sharpen_image, thumb_buf
+                    self._sharpen_image, thumb_buf
                 )
                 
                 # Create Discord files
-                thumb_file = discord.File(sharp_thumb, filename=f"{symbol}_thumb.webp")
-                full_file = discord.File(full_buf, filename=f"{symbol}_full.webp")
+                files = [
+                    discord.File(full_buf, f"{symbol}_full.webp"),
+                    discord.File(sharp_thumb, f"{symbol}_thumb.webp")
+                ]
                 
+                # Build embed
                 embed = discord.Embed(
                     title=f"{trend} {symbol}",
                     color=0x1ABC9C,
@@ -73,98 +89,126 @@ class Tracker(commands.Cog):
                 embed.add_field(name="Change", value=f"{change:+.2f}%", inline=True)
                 embed.set_image(url=f"attachment://{symbol}_thumb.webp")
                 embed.set_footer(text="Click image for full resolution • Updates every minute")
-                
+
+                # Update or create message
                 if not message:
-                    message = await channel.send(embed=embed, files=[full_file, thumb_file])
-                    self.tracker[symbol] = message.id
+                    message = await channel.send(embed=embed, files=files)
+                    tracker[symbol] = message.id
                 else:
-                    await message.edit(embed=embed, attachments=[full_file, thumb_file])
-                
-                # Close buffers
-                thumb_buf.close()
-                full_buf.close()
-                sharp_thumb.close()
+                    await message.edit(embed=embed, attachments=files)
+
+                # Cleanup buffers
+                for buf in [thumb_buf, full_buf, sharp_thumb]:
+                    buf.close()
 
         except Exception as e:
             print(f"Error processing {symbol}: {str(e)}")
-        return None
 
-    def generate_dual_resolution_charts(self, data):
-        """Generate both thumbnail and full-size charts"""
+    def _generate_charts(self, data):
+        """Generate dual-resolution charts"""
         plt.style.use('dark_background')
         mc = mpf.make_marketcolors(
-            up='#27AE60',
-            down='#C0392B',
-            edge='#BDC3C7',
-            wick={'up': '#27AE60', 'down': '#C0392B'}
+            up='#27AE60', down='#C0392B',
+            edge='#BDC3C7', wick={'up': '#27AE60', 'down': '#C0392B'}
         )
-        s = mpf.make_mpf_style(
+        style = mpf.make_mpf_style(
             base_mpl_style='dark_background',
             marketcolors=mc,
             gridstyle='',
             facecolor='#031125'
         )
-        
-        # Thumbnail (small preview)
-        fig_thumb, _ = mpf.plot(
-            data,
-            type='candle',
-            style=s,
-            volume=False,
-            returnfig=True,
-            figsize=(3, 1.5),  # Smaller dimensions
-            axisoff=True,
-            scale_padding=0.1,
-            tight_layout=True
+
+        # Thumbnail
+        fig, _ = mpf.plot(
+            data, type='candle', style=style,
+            volume=False, returnfig=True,
+            figsize=(3, 1.5), axisoff=True,
+            scale_padding=0.1, tight_layout=True
         )
         thumb_buf = io.BytesIO()
-        fig_thumb.savefig(
-            thumb_buf,
-            format='webp',
-            dpi=100,  # Lower DPI for small size
-            bbox_inches='tight',
-            pad_inches=0.1,
-            facecolor='#031125'
-        )
-        plt.close(fig_thumb)
+        fig.savefig(thumb_buf, format='webp', dpi=100, bbox_inches='tight', facecolor='#031125')
+        plt.close(fig)
         thumb_buf.seek(0)
 
-        # Full-size (click-to-view)
-        fig_full, _ = mpf.plot(
-            data,
-            type='candle',
-            style=s,
-            volume=False,
-            returnfig=True,
-            figsize=(10, 5),  # Larger dimensions
-            axisoff=True,
-            scale_padding=0.1,
-            tight_layout=True
+        # Full-size
+        fig, _ = mpf.plot(
+            data, type='candle', style=style,
+            volume=False, returnfig=True,
+            figsize=(10, 5), axisoff=True,
+            scale_padding=0.1, tight_layout=True
         )
         full_buf = io.BytesIO()
-        fig_full.savefig(
-            full_buf,
-            format='webp',
-            dpi=300,  # Higher DPI for detail
-            bbox_inches='tight',
-            pad_inches=0.1,
-            facecolor='#031125'
-        )
-        plt.close(fig_full)
+        fig.savefig(full_buf, format='webp', dpi=300, bbox_inches='tight', facecolor='#031125')
+        plt.close(fig)
         full_buf.seek(0)
 
         return thumb_buf, full_buf
 
-    def sharpen_image(self, image_buffer):
-        """Apply sharpening to reduce blur in thumbnails"""
+    def _sharpen_image(self, image_buffer):
+        """Sharpen thumbnail image"""
         img = Image.open(image_buffer)
         img = img.filter(ImageFilter.SHARPEN)
-        sharp_buf = io.BytesIO()
-        img.save(sharp_buf, format='webp', quality=95)
-        sharp_buf.seek(0)
-        return sharp_buf
+        buf = io.BytesIO()
+        img.save(buf, format='webp', quality=95)
+        buf.seek(0)
+        return buf
 
-    # ... (keep rest of the class methods unchanged) ...
+    @tasks.loop(minutes=1)
+    async def update_announcement(self):
+        """Update all tracked symbols across servers"""
+        for guild_id, config in self.server_configs.items():
+            for symbol in config["tracker"].keys():
+                await self.update_or_create_message(guild_id, symbol)
+
+    @update_announcement.before_loop
+    async def before_update(self):
+        await self.bot.wait_until_ready()
+
+    @commands.hybrid_command()
+    @commands.has_permissions(manage_guild=True)
+    async def set_channel(self, ctx, channel: discord.TextChannel):
+        """Set announcement channel"""
+        guild_id = str(ctx.guild.id)
+        self.server_configs[guild_id] = {
+            "channel_id": channel.id,
+            "tracker": {}
+        }
+        await self.save_configs()
+        await ctx.send(f"✅ Announcements will appear in {channel.mention}")
+
+    @commands.hybrid_command()
+    @commands.has_permissions(manage_guild=True)
+    async def add_ticker(self, ctx, symbol: str):
+        """Add stock to track"""
+        guild_id = str(ctx.guild.id)
+        symbol = symbol.upper()
+        
+        if guild_id not in self.server_configs:
+            await ctx.send("❌ Set a channel first!")
+            return
+            
+        if symbol in self.server_configs[guild_id]["tracker"]:
+            await ctx.send(f"⚠️ {symbol} already tracked!")
+            return
+            
+        self.server_configs[guild_id]["tracker"][symbol] = None
+        await self.save_configs()
+        await ctx.send(f"✅ Added {symbol} to watchlist")
+
+    @commands.hybrid_command()
+    @commands.has_permissions(manage_guild=True)
+    async def remove_ticker(self, ctx, symbol: str):
+        """Remove stock from tracking"""
+        guild_id = str(ctx.guild.id)
+        symbol = symbol.upper()
+        
+        if guild_id in self.server_configs and symbol in self.server_configs[guild_id]["tracker"]:
+            del self.server_configs[guild_id]["tracker"][symbol]
+            await self.save_configs()
+            await ctx.send(f"✅ Removed {symbol} from watchlist")
+        else:
+            await ctx.send(f"⚠️ {symbol} not found!")
+
 
 async def setup(bot):
-    await bot.add_cog(Tracker(bot))
+    await bot.add_cog(StockTracker(bot))
