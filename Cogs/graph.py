@@ -72,8 +72,8 @@ class ChartCog(commands.Cog):
             def create_chart():
                 plt.style.use('dark_background')
                 mc = mpf.make_marketcolors(
-                    up='#27AE60',
-                    down='#C0392B',
+                    up='#C0392B',
+                    down='#27AE60',
                     edge='#BDC3C7',
                     wick={'up': '#27AE60', 'down': '#C0392B'},
                     volume='in'
