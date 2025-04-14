@@ -3,6 +3,8 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 import asyncio
+from webserver import keep_alive
+keep_alive()
 
 load_dotenv()
 
