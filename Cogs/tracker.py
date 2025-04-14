@@ -72,21 +72,13 @@ class Tracker(commands.Cog):
                 change = ((latest["Close"] - hist.iloc[0]["Open"]) / hist.iloc[0]["Open"]) * 100
                 trend = "📈" if change >= 0 else "📉"
                 
-                # Generate dual-resolution charts
-                thumb_buf, full_buf = await asyncio.to_thread(
-                    self.generate_dual_resolution_charts, hist
+                # Generate mini-chart
+                chart = await asyncio.to_thread(
+                    lambda: self.generate_mini_chart(hist)
                 )
+                # Create discord file
 
-                # Sharpen the thumbnail to reduce blurriness
-                sharp_thumb_buf = await asyncio.to_thread(
-                    self.sharpen_image, thumb_buf
-                )
-                
-                # Create Discord files for both images
-                thumb_file = discord.File(sharp_thumb_buf, filename=f"{symbol}_thumb.webp")
-                full_file = discord.File(full_buf, filename=f"{symbol}_full.webp")
-                
-                # Create the embed with the thumbnail image
+                #Create embed with file
                 embed = discord.Embed(
                     title=f"{trend} {symbol}",
                     color=0x1ABC9C,
@@ -94,112 +86,25 @@ class Tracker(commands.Cog):
                 )
                 embed.add_field(name="Price", value=f"${latest['Close']:.2f}", inline=True)
                 embed.add_field(name="Change", value=f"{change:+.2f}%", inline=True)
-                embed.set_image(url=f"attachment://{symbol}_thumb.webp")
+                embed.set_image(url=f"attachment://{symbol}.png")
                 embed.set_footer(text="Click image for full resolution • Updates every minute")
                 
-                # Create a new message or update an existing one
+                # Create new message if missing
                 if not message:
-                    message = await channel.send(embed=embed, files=[full_file, thumb_file])
+                    file = discord.File(chart, filename=f"{symbol}.png")
+                    message = await channel.send(embed=embed, file=file)
                     self.tracker[symbol] = message.id
                 else:
-                    await message.edit(embed=embed, attachments=[full_file, thumb_file])
-                
-                # Close buffers to free memory
-                thumb_buf.close()
-                full_buf.close()
-                sharp_thumb_buf.close()
+                     chart.seek(0)
+                     file = discord.File(chart, filename=f"{symbol}.png")
+                     await message.edit(embed=embed, attachments=[file])
+                    
+                chart.close()
+                return message
 
         except Exception as e:
             print(f"Error processing {symbol}: {str(e)}")
         return None
-
-    def generate_dual_resolution_charts(self, data):
-        """Generate both thumbnail and full-size charts"""
-        plt.style.use('dark_background')
-        mc = mpf.make_marketcolors(
-            up='#27AE60',
-            down='#C0392B',
-            edge='#BDC3C7',
-            wick={'up': '#27AE60', 'down': '#C0392B'}
-        )
-        s = mpf.make_mpf_style(
-            base_mpl_style='dark_background',
-            marketcolors=mc,
-            gridstyle='',
-            facecolor='#031125'
-        )
-
-        # Thumbnail chart (small preview)
-        fig_thumb, _ = mpf.plot(
-            data,
-            type='candle',
-            style=s,
-            volume=False,
-            returnfig=True,
-            figsize=(3, 1.5),  # Small dimensions for preview
-            axisoff=True,
-            scale_padding=0.1,
-            tight_layout=True
-        )
-        thumb_buf = io.BytesIO()
-        fig_thumb.savefig(
-            thumb_buf,
-            format='webp',
-            dpi=100,  # Low DPI for smaller size
-            bbox_inches='tight',
-            pad_inches=0.1,
-            facecolor='#031125'
-        )
-        plt.close(fig_thumb)
-        thumb_buf.seek(0)
-
-        # Full-size chart (click-to-view)
-        fig_full, _ = mpf.plot(
-            data,
-            type='candle',
-            style=s,
-            volume=False,
-            returnfig=True,
-            figsize=(10, 5),  # Larger dimensions for detailed view
-            axisoff=True,
-            scale_padding=0.1,
-            tight_layout=True
-        )
-        full_buf = io.BytesIO()
-        fig_full.savefig(
-            full_buf,
-            format='webp',
-            dpi=300,  # High DPI for better quality on click-to-view
-            bbox_inches='tight',
-            pad_inches=0.1,
-            facecolor='#031125'
-        )
-        plt.close(fig_full)
-        full_buf.seek(0)
-
-        return thumb_buf, full_buf
-
-    def sharpen_image(self, image_buffer):
-        """Apply sharpening to reduce blur in thumbnails"""
-        img = Image.open(image_buffer)
-        img = img.filter(ImageFilter.SHARPEN)
-        sharp_buf = io.BytesIO()
-        img.save(sharp_buf, format='webp', quality=95)  # Save as WebP with high quality
-        sharp_buf.seek(0)
-        return sharp_buf
-
-    @tasks.loop(minutes=1)
-    async def update_announcement(self):
-        if not self.channel_id:
-            return
-
-        # Update existing tickers
-        for symbol in self.get_tickers():
-            await self.update_or_create_message(symbol)
-
-        # Cleanup removed tickers
-        await self.cleanup_messages()
-        await self.save_config()
 
     async def cleanup_messages(self):
         """Delete messages for removed tickers"""
@@ -218,6 +123,60 @@ class Tracker(commands.Cog):
             except discord.NotFound:
                 pass
             del self.tracker[symbol]
+
+    def generate_mini_chart(self, data):
+        """Generate compact 100x50 pixel chart"""
+        plt.style.use('dark_background')
+        mc = mpf.make_marketcolors(
+            up='#27AE60',
+            down='#C0392B',
+            edge='#BDC3C7',
+            wick={'up': '#27AE60', 'down': '#C0392B'}
+        )
+        s = mpf.make_mpf_style(
+            base_mpl_style='dark_background',
+            marketcolors=mc,
+            gridstyle='',
+            facecolor='#031125'
+        )
+        
+        fig, _ = mpf.plot(
+            data,
+            type='candle',
+            style=s,
+            volume=False,
+            returnfig=True,
+            figsize=(5, 2.5),
+            axisoff=True,
+            closefig=True,
+            scale_padding=0.1,
+        )
+        buf = io.BytesIO()
+        fig.savefig(
+            buf,
+            format='png',
+            bbox_inches='tight',
+            pad_inches=0.1,
+            facecolor='#031125',
+            dpi=50,
+            transparent=False
+        )
+        plt.close(fig)
+        buf.seek(0)
+        return buf
+
+    @tasks.loop(minutes=1)
+    async def update_announcement(self):
+        if not self.channel_id:
+            return
+
+        # Update existing tickers
+        for symbol in self.get_tickers():
+            await self.update_or_create_message(symbol)
+
+        # Cleanup removed tickers
+        await self.cleanup_messages()
+        await self.save_config()
 
     def get_tickers(self):
         """Get currently configured tickers"""
