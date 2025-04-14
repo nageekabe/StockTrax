@@ -30,8 +30,8 @@ class ChartCog(commands.Cog):
     @app_commands.autocomplete(period=period_autocomplete, interval=interval_autocomplete)
     async def chart(self, interaction: discord.Interaction, 
                    ticker: str, 
-                   period: str = "1mo",
-                   interval: str = "1d"):
+                   period: str = "1d",
+                   interval: str = "1m"):
         await interaction.response.defer()
         
         try:
