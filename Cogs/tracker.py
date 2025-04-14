@@ -9,7 +9,6 @@ import mplfinance as mpf
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
-from PIL import Image, ImageFilter
 
 class StockTracker(commands.Cog):
     def __init__(self, bot):
@@ -69,8 +68,8 @@ class StockTracker(commands.Cog):
                     self.generate_webp_chart, hist
                 )
                 
-                # Create Discord file
-                file = discord.File(chart_buffer, filename=f"{symbol}.webp")
+                # Create Discord file with HD prefix
+                file = discord.File(chart_buffer, filename=f"HD_{symbol}.webp")
                 
                 # Build embed
                 embed = discord.Embed(
@@ -80,7 +79,7 @@ class StockTracker(commands.Cog):
                 )
                 embed.add_field(name="Price", value=f"${latest['Close']:.2f}", inline=True)
                 embed.add_field(name="Change", value=f"{change:+.2f}%", inline=True)
-                embed.set_image(url=f"attachment://{symbol}.webp")
+                embed.set_image(url=f"attachment://HD_{symbol}.webp")  # Match filename
                 embed.set_footer(text="Click image for full resolution • Updates every minute")
 
                 # Update or create message
@@ -96,7 +95,7 @@ class StockTracker(commands.Cog):
             print(f"Error processing {symbol}: {str(e)}")
 
     def generate_webp_chart(self, data):
-        """Generate high-quality WebP chart"""
+        """Generate high-quality WebP chart with maximum resolution"""
         plt.style.use('dark_background')
         mc = mpf.make_marketcolors(
             up='#27AE60', down='#C0392B',
@@ -109,27 +108,30 @@ class StockTracker(commands.Cog):
             facecolor='#031125'
         )
 
+        # Create high-resolution figure
         fig, _ = mpf.plot(
             data,
             type='candle',
             style=style,
             volume=False,
             returnfig=True,
-            figsize=(10, 5),
+            figsize=(16, 8),  # Larger base dimensions
             axisoff=True,
             scale_padding=0.1,
             tight_layout=True
         )
         
+        # Generate WebP with maximum quality
         buf = io.BytesIO()
         fig.savefig(
             buf,
             format='webp',
-            dpi=200,
+            dpi=300,  # Ultra-high DPI
             bbox_inches='tight',
             pad_inches=0.1,
             facecolor='#031125',
-            quality=95
+            quality=100,  # Maximum WebP quality
+            optimize=True
         )
         plt.close(fig)
         buf.seek(0)
