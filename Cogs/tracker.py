@@ -64,7 +64,7 @@ class StockTracker(commands.Cog):
             # Get separate datasets
             try:
                 intraday_data = stock.history(period="1d", interval="5m")
-                daily_data = stock.history(period="2d", interval="15m")
+                daily_data = stock.history(period="2d", interval="1d")
             except Exception as e:
                 print(f"YFinance error for {symbol}: {str(e)}")
                 return
@@ -75,10 +75,13 @@ class StockTracker(commands.Cog):
                 return
                 
             # Calculate daily percentage change
-            previous_close = daily_data.iloc[25]["Close"]
+            previous_close = daily_data.iloc[0]["Close"]
             current_price = intraday_data.iloc[-1]["Close"]
-            daily_change = ((current_price - previous_close) / previous_close)
-            trend, newcolor = ("📈", "#2ECC71") if daily_change >= 0 else ("📉", "#E74C3C")
+            daily_change = ((current_price - previous_close) / previous_close) * 100
+            print(daily_data, intraday_data)
+            print(previous_close, current_price)
+            
+            trend, newcolor = ("📈", [46, 204, 113]) if daily_change >= 0 else ("📉", [231, 76, 60])
             
             # Generate optimized WebP chart
             chart_buffer = await asyncio.to_thread(
@@ -91,7 +94,7 @@ class StockTracker(commands.Cog):
             # Build embed
             embed = discord.Embed(
                 title=f"{trend} {symbol}",
-                color=newcolor,
+                color=discord.Color.from_rgb(newcolor[0], newcolor[1], newcolor[2]),
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
             embed.add_field(name="Price", value=f"${current_price:.2f}", inline=True)
@@ -121,22 +124,23 @@ class StockTracker(commands.Cog):
         style = mpf.make_mpf_style(
             base_mpl_style='dark_background',
             marketcolors=mc,
-            gridstyle='',
+            gridstyle='--',
+            gridcolor='#2C3E50',
             facecolor='#031125'
         )
 
         # Create high-resolution figure
         fig, _ = mpf.plot(
-            data,
-            type='candle',
-            style=style,
-            volume=False,
-            returnfig=True,
-            figsize=(6, 3),
-            axisoff=True,
-            scale_padding=0.1,
-            tight_layout=True
-        )
+                    data,
+                    type='candle',
+                    style=style,
+                    ylabel='Price',
+                    xlabel='Time',
+                    volume=False,
+                    returnfig=True,
+                    figsize=(6,3),
+                    closefig=True  # Ensure figure is closed after plotting
+                )
         
         # Generate WebP with maximum quality
         buf = io.BytesIO()
