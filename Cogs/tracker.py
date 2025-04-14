@@ -72,7 +72,7 @@ class StockTracker(commands.Cog):
                 hist = hist.dropna()
                 
                 latest = hist.iloc[-1]
-                change = ((latest["Close"] - hist.iloc[0]["Open"]) / hist.iloc[0]["Open"]) * 100
+                change = ((latest["Close"] - hist.iloc[0]["Open"]) / hist.iloc[0]["Close"]) * 100
                 trend = "📈" if change >= 0 else "📉"
                 
                 # Generate chart
