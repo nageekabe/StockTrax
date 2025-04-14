@@ -31,7 +31,7 @@ class ChartCog(commands.Cog):
     async def chart(self, interaction: discord.Interaction, 
                    ticker: str, 
                    period: str = "1d",
-                   interval: str = "1m"):
+                   interval: str = "5m"):
         await interaction.response.defer()
         
         try:
