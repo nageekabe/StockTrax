@@ -77,7 +77,7 @@ class StockTracker(commands.Cog):
             # Calculate daily percentage change
             previous_close = daily_data.iloc[25]["Close"]
             current_price = intraday_data.iloc[-1]["Close"]
-            daily_change = ((current_price - previous_close) / previous_close) * 100
+            daily_change = ((current_price - previous_close) / previous_close)
             trend, newcolor = ("📈", "#2ECC71") if daily_change >= 0 else ("📉", "#E74C3C")
             
             # Generate optimized WebP chart
