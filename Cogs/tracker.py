@@ -60,7 +60,7 @@ class Tracker(commands.Cog):
 
             # Generate new content
             stock = yf.Ticker(symbol)
-            hist = stock.history(period="1d", interval="5m")
+            hist = stock.history(period="1d", interval="1m")
             
             if not hist.empty:
                 hist = hist[['Open', 'High', 'Low', 'Close', 'Volume']]
