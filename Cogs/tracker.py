@@ -97,8 +97,8 @@ class StockTracker(commands.Cog):
                 color=discord.Color.from_rgb(newcolor[0], newcolor[1], newcolor[2]),
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
-            embed.add_field(name="Price", value=f"``**${current_price:.2f}**``", inline=True)
-            embed.add_field(name="Change", value=f"``**{daily_change:+.2f}%**``", inline=True)
+            embed.add_field(name="Price", value=f"**``${current_price:.2f}``**", inline=True)
+            embed.add_field(name="Change", value=f"**``{daily_change:+.2f}%``**", inline=True)
             embed.set_image(url=f"attachment://HD_{symbol}.webp")
             embed.set_footer(text="Click image for full resolution • Updates every minute")
 
