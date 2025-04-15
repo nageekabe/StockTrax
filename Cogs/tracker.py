@@ -118,9 +118,10 @@ class StockTracker(commands.Cog):
         """Generate high-quality WebP chart"""
         plt.style.use('dark_background')
         mc = mpf.make_marketcolors(
-            up='#27AE60', down='#C0392B',
-            wick={'up': '#C0392B', 'down': '#27AE60'},
+            up='#C0392B',
+            down='#27AE60',
             edge='transparent',
+            wick={'up': '#27AE60', 'down': '#C0392B'},
             volume='in'
         )
         style = mpf.make_mpf_style(
