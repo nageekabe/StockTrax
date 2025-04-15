@@ -168,7 +168,7 @@ class StockTracker(commands.Cog):
                 continue
                 
             for symbol in config["tracker"].keys():
-                await self.update_or_create_message(guild_id, symbol)
+                self.update_or_create_message(guild_id, symbol)
             await self.save_configs()
 
     @update_announcement.before_loop
@@ -224,6 +224,41 @@ class StockTracker(commands.Cog):
             await ctx.send(f"✅ Removed {symbol} from watchlist")
         else:
             await ctx.send(f"⚠️ {symbol} not found!")
+    
+    @commands.command(name="watchlist", description="View the current watchlist")
+    async def watchlist(self, interaction: discord.Interaction):
+        """Command to display the current watchlist with simple info."""
+        guild_id = str(interaction.guild.id)
+        if guild_id not in self.server_configs or not self.server_configs[guild_id].get("tracker"):
+            await interaction.response.send_message("❌ No tickers are being tracked in this server.", ephemeral=True)
+            return
+
+        watchlist = self.server_configs[guild_id]["tracker"].keys()
+        if not watchlist:
+            await interaction.response.send_message("❌ The watchlist is empty.", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="📋 Current Watchlist",
+            color=0x3498DB,
+            timestamp=discord.utils.utcnow()
+        )
+
+        for symbol in watchlist:
+            stock = yf.Ticker(symbol)
+            data = stock.history(period="1d")
+            if data.empty:
+                embed.add_field(name=symbol, value="❌ No data available", inline=False)
+                continue
+
+            latest_price = data["Close"].iloc[-1]
+            embed.add_field(
+                name=symbol,
+                value=f"Price: **${latest_price:.2f}**",
+                inline=False
+            )
+
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(StockTracker(bot))

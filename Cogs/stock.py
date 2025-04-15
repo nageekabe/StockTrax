@@ -40,7 +40,6 @@ class StockCog(commands.Cog):
             embed.add_field(name="Open", value=f"${hist.iloc[0]['Open']:.2f}", inline=True)
             embed.add_field(name="High", value=f"${latest['High']:.2f}", inline=True)
             embed.add_field(name="Low", value=f"${latest['Low']:.2f}", inline=True)
-            embed.set_footer(text="Data from Yahoo Finance")
             
             await interaction.followup.send(embed=embed)
 
