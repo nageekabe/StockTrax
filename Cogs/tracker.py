@@ -122,7 +122,6 @@ class StockTracker(commands.Cog):
             down='#27AE60',
             edge='transparent',
             wick={'up': '#27AE60', 'down': '#C0392B'},
-            volume='in'
         )
         style = mpf.make_mpf_style(
             base_mpl_style='dark_background',

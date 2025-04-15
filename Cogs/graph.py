@@ -76,7 +76,6 @@ class ChartCog(commands.Cog):
                     down='#27AE60',
                     edge='transparent',
                     wick={'up': '#27AE60', 'down': '#C0392B'},
-                    volume='in'
                 )
                 s = mpf.make_mpf_style(
                     base_mpl_style='dark_background',
