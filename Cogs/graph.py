@@ -74,6 +74,7 @@ class ChartCog(commands.Cog):
                 mc = mpf.make_marketcolors(
                     up='#C0392B',
                     down='#27AE60',
+                    edge='transparent',
                     wick={'up': '#27AE60', 'down': '#C0392B'},
                     volume='in'
                 )
@@ -87,6 +88,7 @@ class ChartCog(commands.Cog):
                 fig, _ = mpf.plot(
                     data,
                     type='candle',
+                    mav=(3, 21, 43),
                     style=s,
                     ylabel='',
                     volume=False,
