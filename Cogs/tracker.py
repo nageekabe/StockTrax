@@ -78,9 +78,6 @@ class StockTracker(commands.Cog):
             previous_close = daily_data.iloc[0]["Close"]
             current_price = intraday_data.iloc[-1]["Close"]
             daily_change = ((current_price - previous_close) / previous_close) * 100
-            print(daily_data, intraday_data)
-            print(previous_close, current_price)
-            
             trend, newcolor = ("📈", [46, 204, 113]) if daily_change >= 0 else ("📉", [231, 76, 60])
             
             # Generate optimized WebP chart
@@ -168,7 +165,7 @@ class StockTracker(commands.Cog):
                 continue
                 
             for symbol in config["tracker"].keys():
-                self.update_or_create_message(guild_id, symbol)
+                await self.update_or_create_message(guild_id, symbol)
             await self.save_configs()
 
     @update_announcement.before_loop
@@ -225,17 +222,17 @@ class StockTracker(commands.Cog):
         else:
             await ctx.send(f"⚠️ {symbol} not found!")
     
-    @commands.command(name="watchlist", description="View the current watchlist")
-    async def watchlist(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="watchlist", description="View the current watchlist")
+    async def watchlist(self, ctx):
         """Command to display the current watchlist with simple info."""
-        guild_id = str(interaction.guild.id)
+        guild_id = str(ctx.guild.id)
         if guild_id not in self.server_configs or not self.server_configs[guild_id].get("tracker"):
-            await interaction.response.send_message("❌ No tickers are being tracked in this server.", ephemeral=True)
+            await ctx.send("❌ No tickers are being tracked in this server.", ephemeral=True)
             return
 
         watchlist = self.server_configs[guild_id]["tracker"].keys()
         if not watchlist:
-            await interaction.response.send_message("❌ The watchlist is empty.", ephemeral=True)
+            await ctx.send("❌ The watchlist is empty.", ephemeral=True)
             return
 
         embed = discord.Embed(
@@ -253,12 +250,12 @@ class StockTracker(commands.Cog):
 
             latest_price = data["Close"].iloc[-1]
             embed.add_field(
-                name=symbol,
-                value=f"Price: **${latest_price:.2f}**",
+                name=f"**{symbol.upper()}**",  # Capitalize the symbol,
+                value=f"Price: **``${latest_price:.2f}``**\nChange: **``{((latest_price - data['Open'].iloc[0]) / data['Open'].iloc[0]) * 100:+.2f}%``**",
                 inline=False
             )
 
-        await interaction.response.send_message(embed=embed)
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(StockTracker(bot))
