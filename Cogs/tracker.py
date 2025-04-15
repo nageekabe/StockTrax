@@ -100,7 +100,7 @@ class StockTracker(commands.Cog):
             embed.add_field(name="Price", value=f"**``${current_price:.2f}``**", inline=True)
             embed.add_field(name="Change", value=f"**``{daily_change:+.2f}%``**", inline=True)
             embed.set_image(url=f"attachment://HD_{symbol}.webp")
-            embed.set_footer(text="Click image for full resolution • Updates every minute")
+            embed.set_footer(text="Click image for full resolution • Updates every 15 seconds.")
 
             # Update or create message
             if not message:
@@ -157,7 +157,7 @@ class StockTracker(commands.Cog):
         buf.seek(0)
         return buf
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=15)
     async def update_announcement(self):
         """Update all tracked symbols"""
         if not self.server_configs:
