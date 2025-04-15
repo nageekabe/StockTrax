@@ -97,8 +97,8 @@ class StockTracker(commands.Cog):
                 color=discord.Color.from_rgb(newcolor[0], newcolor[1], newcolor[2]),
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
-            embed.add_field(name="Price", value=f"${current_price:.2f}", inline=True)
-            embed.add_field(name="Change", value=f"{daily_change:+.2f}%", inline=True)
+            embed.add_field(name="Price", value=f"``**${current_price:.2f}**``", inline=True)
+            embed.add_field(name="Change", value=f"``**{daily_change:+.2f}%**``", inline=True)
             embed.set_image(url=f"attachment://HD_{symbol}.webp")
             embed.set_footer(text="Click image for full resolution • Updates every minute")
 
@@ -134,8 +134,8 @@ class StockTracker(commands.Cog):
                     data,
                     type='candle',
                     style=style,
-                    ylabel='Price',
-                    xlabel='Time',
+                    ylabel='',
+                    xlabel='',
                     volume=False,
                     returnfig=True,
                     figsize=(6,3),
@@ -176,7 +176,7 @@ class StockTracker(commands.Cog):
         await self.bot.wait_until_ready()
 
     @commands.hybrid_command()
-    @commands.has_permissions(manage_guild=True)
+    @commands.has_permissions(administrator=True)
     async def set_channel(self, ctx, channel: discord.TextChannel):
         """Set announcement channel"""
         guild_id = str(ctx.guild.id)
@@ -188,7 +188,7 @@ class StockTracker(commands.Cog):
         await ctx.send(f"✅ Announcements will appear in {channel.mention}")
 
     @commands.hybrid_command()
-    @commands.has_permissions(manage_guild=True)
+    @commands.has_permissions(administrator=True)
     async def add_ticker(self, ctx, symbol: str):
         """Add stock to track"""
         guild_id = str(ctx.guild.id)
@@ -207,7 +207,7 @@ class StockTracker(commands.Cog):
         await ctx.send(f"✅ Added {symbol} to watchlist")
 
     @commands.hybrid_command()
-    @commands.has_permissions(manage_guild=True)
+    @commands.has_permissions(administrator=True)
     async def remove_ticker(self, ctx, symbol: str):
         """Remove stock from tracking"""
         guild_id = str(ctx.guild.id)
