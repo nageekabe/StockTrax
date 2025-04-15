@@ -120,7 +120,7 @@ class StockTracker(commands.Cog):
         mc = mpf.make_marketcolors(
             up='#C0392B',
             down='#27AE60',
-            wick={'up': '#27AE60', 'down': '#C0392B'},
+            wick={'up': '#C0392B', 'down': '#27AE60'},
             volume='in',
         )
         style = mpf.make_mpf_style(
