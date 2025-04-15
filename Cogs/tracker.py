@@ -157,7 +157,7 @@ class StockTracker(commands.Cog):
         buf.seek(0)
         return buf
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=10)
     async def update_announcement(self):
         """Update all tracked symbols"""
         if not self.server_configs:
