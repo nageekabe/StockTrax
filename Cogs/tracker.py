@@ -123,26 +123,24 @@ class StockTracker(commands.Cog):
             wick={'up': '#C0392B', 'down': '#27AE60'},
             volume='in',
         )
-        style = mpf.make_mpf_style(
+        s = mpf.make_mpf_style(
             base_mpl_style='dark_background',
             marketcolors=mc,
             gridstyle='--',
             gridcolor='#2C3E50',
             facecolor='#031125'
         )
-
-        # Create high-resolution figure
         fig, _ = mpf.plot(
-                    data,
-                    type='candle',
-                    style=style,
-                    ylabel='',
-                    xlabel='',
-                    volume=False,
-                    returnfig=True,
-                    figsize=(6,3),
-                    closefig=True  # Ensure figure is closed after plotting
-                )
+            data,
+            type='candle',
+            mav=(3, 21, 43),
+            style=s,
+            ylabel='',
+            volume=False,
+            returnfig=True,
+            figsize=(12,6),
+            closefig=True  # Ensure figure is closed after plotting
+        )
         
         # Generate WebP with maximum quality
         buf = io.BytesIO()
