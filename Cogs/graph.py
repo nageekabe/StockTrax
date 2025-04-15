@@ -81,6 +81,7 @@ class ChartCog(commands.Cog):
                     base_mpl_style='dark_background',
                     marketcolors=mc,
                     gridstyle='--',
+                    gridaxis='horizontal',
                     gridcolor='#2C3E50',
                     facecolor='#031125'
                 )
