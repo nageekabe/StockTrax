@@ -23,7 +23,7 @@ class StockCog(commands.Cog):
                     description=f"Couldn't find data for {ticker.upper()}",
                     color=0xE74C3C
                 )
-                return await interaction.followup.send(embed=embed)
+                return await interaction.followup.send(embed=embed, ephemeral=True)
 
             latest = hist.iloc[-1]
             change = ((latest["Close"] - hist.iloc[0]["Open"]) / hist.iloc[0]["Open"]) * 100
@@ -41,7 +41,7 @@ class StockCog(commands.Cog):
             embed.add_field(name="High", value=f"${latest['High']:.2f}", inline=True)
             embed.add_field(name="Low", value=f"${latest['Low']:.2f}", inline=True)
             
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as e:
             embed = discord.Embed(
@@ -49,7 +49,7 @@ class StockCog(commands.Cog):
                 description=f"``````",
                 color=0xE74C3C
             )
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(StockCog(bot))

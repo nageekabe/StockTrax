@@ -60,7 +60,7 @@ class ChartCog(commands.Cog):
                     description=f"No valid data found for {ticker.upper()}",
                     color=0xE74C3C
                 )
-                return await interaction.followup.send(embed=embed)
+                return await interaction.followup.send(embed=embed, ephemeral=True)
 
             # Clean data
             data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
@@ -112,7 +112,8 @@ class ChartCog(commands.Cog):
             embed.set_image(url="attachment://chart.png")
             await interaction.followup.send(
                 embed=embed,
-                file=discord.File(chart, "chart.png")
+                file=discord.File(chart, "chart.png"),
+                ephemeral=True
             )
             chart.close()
 
@@ -122,14 +123,14 @@ class ChartCog(commands.Cog):
                 description="Data fetch took too long",
                 color=0xE74C3C
             )
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
             embed = discord.Embed(
                 title="⚠️ Chart Error",
                 description=f"``````",  # Truncate long errors
                 color=0xE74C3C
             )
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(ChartCog(bot))

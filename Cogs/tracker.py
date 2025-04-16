@@ -24,6 +24,7 @@ class StockTracker(commands.Cog):
             if os.path.exists("server_configs.json"):
                 with open("server_configs.json", "r") as f:
                     self.server_configs = json.load(f)
+
         except Exception as e:
             print(f"Config load error: {e}")
             self.server_configs = {}
@@ -53,8 +54,9 @@ class StockTracker(commands.Cog):
             if symbol in tracker and tracker[symbol]:
                 try:
                     message = await channel.fetch_message(int(tracker[symbol]))
-                except discord.NotFound:
-                    tracker[symbol] = None
+                    if not message:
+                        tracker[symbol] = None
+                        message = None
                 except discord.Forbidden:
                     print(f"Missing permissions in channel {channel.id}")
                     return
@@ -161,7 +163,7 @@ class StockTracker(commands.Cog):
         if not self.server_configs:
             return
             
-        for guild_id, config in self.server_configs.items():
+        for guild_id, config in self.load_configs().items():
             if not config.get("tracker"):
                 continue
                 
@@ -180,10 +182,10 @@ class StockTracker(commands.Cog):
         guild_id = str(ctx.guild.id)
         self.server_configs[guild_id] = {
             "channel_id": str(channel.id),
-            "tracker": {}
+            "tracker": {self.server_configs[guild_id].get("tracker", {})}
         }
         await self.save_configs()
-        await ctx.send(f"✅ Announcements will appear in {channel.mention}")
+        await ctx.send(f"✅ Announcements will appear in {channel.mention}", ephemeral=True)
 
     @commands.hybrid_command()
     @commands.has_permissions(administrator=True)
@@ -193,16 +195,16 @@ class StockTracker(commands.Cog):
         symbol = symbol.upper()
         
         if guild_id not in self.server_configs:
-            await ctx.send("❌ Set a channel first using /set_channel!")
+            await ctx.send("❌ Set a channel first using /set_channel!", ephemeral=True)
             return
             
         if symbol in self.server_configs[guild_id]["tracker"]:
-            await ctx.send(f"⚠️ {symbol} already tracked!")
+            await ctx.send(f"⚠️ {symbol} already tracked!", ephemeral=True)
             return
             
         self.server_configs[guild_id]["tracker"][symbol] = None
         await self.save_configs()
-        await ctx.send(f"✅ Added {symbol} to watchlist")
+        await ctx.send(f"✅ Added {symbol} to watchlist", ephemeral=True)
 
     @commands.hybrid_command()
     @commands.has_permissions(administrator=True)
@@ -219,9 +221,9 @@ class StockTracker(commands.Cog):
             await msg.delete()
             del self.server_configs[guild_id]["tracker"][symbol]
             await self.save_configs()
-            await ctx.send(f"✅ Removed {symbol} from watchlist")
+            await ctx.send(f"✅ Removed {symbol} from watchlist", ephemeral=True)
         else:
-            await ctx.send(f"⚠️ {symbol} not found!")
+            await ctx.send(f"⚠️ {symbol} not found!", ephemeral=True)
     
     @commands.hybrid_command(name="watchlist", description="View the current watchlist")
     async def watchlist(self, ctx):
@@ -256,7 +258,7 @@ class StockTracker(commands.Cog):
                 inline=False
             )
 
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(StockTracker(bot))
