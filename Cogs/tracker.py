@@ -40,23 +40,23 @@ class StockTracker(commands.Cog):
     async def update_or_create_message(self, guild_id, symbol):
         """Handle message updates with proper daily % calculation"""
         config = self.server_configs.get(str(guild_id), {})
-        if not config.get("channel_id"):
+        if not config['channel_id']:
+
             return
 
-        channel = self.bot.get_channel(int(config["channel_id"]))
+        channel = self.bot.get_channel(int(config['channel_id']))
         if not channel:
             return
 
         try:
             message = None
-            tracker = config["tracker"]
+            tracker = config['tracker']
             
             if symbol in tracker and tracker[symbol]:
                 try:
-                    message = await channel.fetch_message(int(tracker[symbol]))
-                    if not message:
-                        tracker[symbol] = None
-                        message = None
+                    message = await channel.fetch_message(int(symbol))
+                except discord.NotFound:
+                    print(f"Message not found for {symbol}")
                 except discord.Forbidden:
                     print(f"Missing permissions in channel {channel.id}")
                     return
