@@ -180,9 +180,10 @@ class StockTracker(commands.Cog):
     async def set_channel(self, ctx, channel: discord.TextChannel):
         """Set announcement channel"""
         guild_id = str(ctx.guild.id)
+        old_tracked_tickers = self.server_configs.get(guild_id, {}).get("tracker", {})
         self.server_configs[guild_id] = {
             "channel_id": str(channel.id),
-            "tracker": {self.server_configs[guild_id].get("tracker", {})}
+            "tracker": {old_tracked_tickers.get(ticker): None for ticker in old_tracked_tickers}
         }
         await self.save_configs()
         await ctx.send(f"✅ Announcements will appear in {channel.mention}", ephemeral=True)
